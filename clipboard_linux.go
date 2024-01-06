@@ -30,6 +30,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"os/exec"
 	"runtime"
 	"runtime/cgo"
 	"time"
@@ -55,6 +56,14 @@ Then this package should be ready to use.
 `
 
 func initialize() error {
+	if os.Getenv("WAYLAND_DISPLAY") != "" {
+		_, err := exec.LookPath("wl-paste")
+		if err != nil {
+			return fmt.Errorf("can't find wl-clipboard command: %w", err)
+		}
+		return nil
+	}
+
 	ok := C.clipboard_test()
 	if ok != 0 {
 		return fmt.Errorf(helpmsg, errUnavailable)
@@ -63,6 +72,15 @@ func initialize() error {
 }
 
 func read(t Format) (buf []byte, err error) {
+	if os.Getenv("WAYLAND_DISPLAY") != "" {
+		cmd := exec.Command("wl-paste", "-n")
+		out, err := cmd.CombinedOutput()
+		if err != nil {
+			return nil, fmt.Errorf("can't exec wl-clipboard command: %w", err)
+		}
+		return out, nil
+	}
+
 	switch t {
 	case FmtText:
 		return readc("UTF8_STRING")
