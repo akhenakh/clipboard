@@ -76,7 +76,7 @@ func read(t Format) (buf []byte, err error) {
 		cmd := exec.Command("wl-paste", "-n")
 		out, err := cmd.CombinedOutput()
 		if err != nil {
-			return nil, fmt.Errorf("can't exec wl-clipboard command: %w", err)
+			return nil, fmt.Errorf("can't exec wl-paste command: %w", err)
 		}
 		return out, nil
 	}
@@ -119,8 +119,30 @@ func write(t Format, buf []byte) (<-chan struct{}, error) {
 		s = "image/png"
 	}
 
-	start := make(chan int)
 	done := make(chan struct{}, 1)
+
+	if os.Getenv("WAYLAND_DISPLAY") != "" {
+		cmd := exec.Command("wl-copy", "-f")
+		stdin, err := cmd.StdinPipe()
+		if err != nil {
+			return nil, fmt.Errorf("can't exec wl-copy command: %w", err)
+		}
+
+		go func() {
+			defer stdin.Close()
+			stdin.Write(buf)
+			done <- struct{}{}
+			close(done)
+		}()
+
+		if err := cmd.Start(); err != nil {
+			return nil, fmt.Errorf("can't get output for wl-copy command: %w", err)
+		}
+
+		return done, nil
+	}
+
+	start := make(chan int)
 
 	go func() { // serve as a daemon until the ownership is terminated.
 		runtime.LockOSThread()
