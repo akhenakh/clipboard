@@ -122,7 +122,7 @@ func write(t Format, buf []byte) (<-chan struct{}, error) {
 	done := make(chan struct{}, 1)
 
 	if os.Getenv("WAYLAND_DISPLAY") != "" {
-		cmd := exec.Command("wl-copy", "-f")
+		cmd := exec.Command("wl-copy", "-f", "-p")
 		stdin, err := cmd.StdinPipe()
 		if err != nil {
 			return nil, fmt.Errorf("can't exec wl-copy command: %w", err)
